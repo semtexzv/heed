@@ -57,6 +57,15 @@ pub mod cursor_op {
     pub const MDB_GET_CURRENT: MDB_cursor_op = ffi::MDB_GET_CURRENT;
 }
 
+
+pub fn map_size(env: *mut MDB_env) -> Result<usize, crate::Error> {
+    let mut env_info = std::mem::MaybeUninit::uninit();
+    unsafe { super::error::mdb_result(mdb_env_info(env, env_info.as_mut_ptr()))? };
+    let env_info = unsafe { env_info.assume_init() };
+
+    Ok(env_info.me_mapsize as _)
+}
+
 pub unsafe fn into_val(value: &[u8]) -> ffi::MDB_val {
     ffi::MDB_val { mv_data: value.as_ptr() as *mut libc::c_void, mv_size: value.len() }
 }

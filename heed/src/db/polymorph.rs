@@ -125,11 +125,12 @@ impl PolyDatabase {
     /// use heed::types::*;
     ///
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-    /// # fs::create_dir_all(Path::new("target").join("zerocopy.mdb"))?;
+    /// let dir = Path::new("target").join("zerocopy0.mdb");
+    /// fs::create_dir_all(&dir)?;
     /// # let env = EnvOpenOptions::new()
     /// #     .map_size(10 * 1024 * 1024) // 10MB
     /// #     .max_dbs(3000)
-    /// #     .open(Path::new("target").join("zerocopy.mdb"))?;
+    /// #     .open(&dir)?;
     /// let mut wtxn = env.write_txn()?;
     /// let db = env.create_poly_database(&mut wtxn, Some("use-sequence-1"))?;
     /// wtxn.commit()?;
@@ -151,6 +152,7 @@ impl PolyDatabase {
     /// let rtxn = env.read_txn()?;
     /// let ret = db.sequence(&rtxn)?;
     /// assert_eq!(ret, 60);
+    /// std::fs::remove_dir_all(dir)?;
     ///
     /// # Ok(()) }
     /// ```
@@ -192,11 +194,12 @@ impl PolyDatabase {
     /// use heed::types::*;
     ///
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-    /// # fs::create_dir_all(Path::new("target").join("zerocopy.mdb"))?;
+    /// let dir = Path::new("target").join("zerocopy1.mdb");
+    /// # fs::create_dir_all(&dir)?;
     /// # let env = EnvOpenOptions::new()
     /// #     .map_size(10 * 1024 * 1024) // 10MB
     /// #     .max_dbs(3000)
-    /// #     .open(Path::new("target").join("zerocopy.mdb"))?;
+    /// #     .open(&dir)?;
     /// let mut wtxn = env.write_txn()?;
     /// let db = env.create_poly_database(&mut wtxn, Some("use-sequence-2"))?;
     /// wtxn.commit()?;
@@ -211,7 +214,7 @@ impl PolyDatabase {
     /// let rtxn = env.read_txn()?;
     /// let ret = db.sequence(&rtxn)?;
     /// assert_eq!(ret, 60);
-    ///
+    /// std::fs::remove_dir_all(dir)?;
     /// # Ok(()) }
     /// ```
     #[cfg(all(feature = "mdbx", not(feature = "lmdb")))]
@@ -245,11 +248,13 @@ impl PolyDatabase {
     /// use heed::types::*;
     ///
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-    /// # fs::create_dir_all(Path::new("target").join("zerocopy.mdb"))?;
+    /// use tempfile::tempdir;
+    /// let dbfile = tempdir().unwrap().into_path() .join("zerocopy.mdb");
+    /// # fs::create_dir_all(&dbfile)?;
     /// # let env = EnvOpenOptions::new()
     /// #     .map_size(10 * 1024 * 1024) // 10MB
     /// #     .max_dbs(3000)
-    /// #     .open(Path::new("target").join("zerocopy.mdb"))?;
+    /// #     .open(dbfile)?;
     /// let mut wtxn = env.write_txn()?;
     /// let db = env.create_poly_database(&mut wtxn, Some("get-poly-i32"))?;
     /// wtxn.commit()?;

@@ -306,16 +306,12 @@ impl Env {
 
     /// The map size that was set when configuring the environment.
     pub fn map_size(&self) -> Result<usize> {
-        let mut env_info = std::mem::MaybeUninit::uninit();
-        unsafe { mdb_result(ffi::mdb_env_info(self.env_mut_ptr(), env_info.as_mut_ptr()))? };
-        let env_info = unsafe { env_info.assume_init() };
-
-        Ok(env_info.me_mapsize)
+        ffi::map_size(self.env_mut_ptr())
     }
 
     /// Returns the size used by all the databases in the environment without the free pages.
     pub fn non_free_pages_size(&self) -> Result<u64> {
-        let compute_size = |stat: lmdb_sys::MDB_stat| {
+        let compute_size = |stat: ffi::MDB_stat| {
             (stat.ms_leaf_pages + stat.ms_branch_pages + stat.ms_overflow_pages) as u64
                 * stat.ms_psize as u64
         };
@@ -352,12 +348,20 @@ impl Env {
 
                 // if the db wasn’t already opened
                 if !dbi_open.contains_key(&dbi) {
-                    unsafe { ffi::mdb_dbi_close(self.env_mut_ptr(), dbi) }
+                    unsafe { ffi::mdb_dbi_close(self.env_mut_ptr(), dbi); }
                 }
             }
         }
 
         Ok(size)
+    }
+    #[cfg(feature = "mdbx")]
+    fn set_geometry(&self, min_size: usize, size: usize, max_size: usize, step: usize, shrink_threshold: usize, page_size: usize) -> Result<()> {
+        let env = self.env_mut_ptr();
+        unsafe {
+            mdb_result(ffi::mdb_env_set_geometry(env, min_size as _, size as _, max_size as _, step as _, shrink_threshold as _, page_size as _))?;
+        }
+        Ok(())
     }
 
     pub(crate) fn env_mut_ptr(&self) -> *mut ffi::MDB_env {
@@ -425,7 +429,7 @@ impl Env {
         raw_txn: *mut ffi::MDB_txn,
         name: Option<&str>,
         flags: u32,
-    ) -> std::result::Result<u32, crate::mdb::lmdb_error::Error> {
+    ) -> std::result::Result<u32, crate::mdb::error::Error> {
         let mut dbi = 0;
         let name = name.map(|n| CString::new(n).unwrap());
         let name_ptr = match name {
@@ -649,5 +653,15 @@ mod tests {
             .open(&path);
 
         assert!(env.is_err());
+    }
+    #[test]
+    fn test_geometry() {
+        let dir = tempdir().unwrap();
+        let path = dir.path();
+        let _env = EnvOpenOptions::new()
+            .map_size(10 * 1024 * 1024) // 10MB
+            .open(&path)
+            .unwrap();
+
     }
 }
