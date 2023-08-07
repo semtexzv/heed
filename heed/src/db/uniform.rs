@@ -187,7 +187,7 @@ impl<KC, DC> Database<KC, DC> {
     ) -> Result<Option<DC::DItem>>
     where
         KC: BytesEncode<'a>,
-        DC: BytesDecode<'txn>,
+        DC: BytesDecode,
     {
         self.dyndb.get::<T, KC, DC>(txn, key)
     }
@@ -241,8 +241,8 @@ impl<KC, DC> Database<KC, DC> {
         key: &'a KC::EItem,
     ) -> Result<Option<(KC::DItem, DC::DItem)>>
     where
-        KC: BytesEncode<'a> + BytesDecode<'txn>,
-        DC: BytesDecode<'txn>,
+        KC: BytesEncode<'a> + BytesDecode,
+        DC: BytesDecode,
     {
         self.dyndb.get_lower_than::<T, KC, DC>(txn, key)
     }
@@ -296,8 +296,8 @@ impl<KC, DC> Database<KC, DC> {
         key: &'a KC::EItem,
     ) -> Result<Option<(KC::DItem, DC::DItem)>>
     where
-        KC: BytesEncode<'a> + BytesDecode<'txn>,
-        DC: BytesDecode<'txn>,
+        KC: BytesEncode<'a> + BytesDecode,
+        DC: BytesDecode,
     {
         self.dyndb.get_lower_than_or_equal_to::<T, KC, DC>(txn, key)
     }
@@ -351,8 +351,8 @@ impl<KC, DC> Database<KC, DC> {
         key: &'a KC::EItem,
     ) -> Result<Option<(KC::DItem, DC::DItem)>>
     where
-        KC: BytesEncode<'a> + BytesDecode<'txn>,
-        DC: BytesDecode<'txn>,
+        KC: BytesEncode<'a> + BytesDecode,
+        DC: BytesDecode,
     {
         self.dyndb.get_greater_than::<T, KC, DC>(txn, key)
     }
@@ -406,8 +406,8 @@ impl<KC, DC> Database<KC, DC> {
         key: &'a KC::EItem,
     ) -> Result<Option<(KC::DItem, DC::DItem)>>
     where
-        KC: BytesEncode<'a> + BytesDecode<'txn>,
-        DC: BytesDecode<'txn>,
+        KC: BytesEncode<'a> + BytesDecode,
+        DC: BytesDecode,
     {
         self.dyndb.get_greater_than_or_equal_to::<T, KC, DC>(txn, key)
     }
@@ -449,8 +449,8 @@ impl<KC, DC> Database<KC, DC> {
     /// ```
     pub fn first<'txn, T>(&self, txn: &'txn RoTxn<T>) -> Result<Option<(KC::DItem, DC::DItem)>>
     where
-        KC: BytesDecode<'txn>,
-        DC: BytesDecode<'txn>,
+        KC: BytesDecode,
+        DC: BytesDecode,
     {
         self.dyndb.first::<T, KC, DC>(txn)
     }
@@ -492,8 +492,8 @@ impl<KC, DC> Database<KC, DC> {
     /// ```
     pub fn last<'txn, T>(&self, txn: &'txn RoTxn<T>) -> Result<Option<(KC::DItem, DC::DItem)>>
     where
-        KC: BytesDecode<'txn>,
-        DC: BytesDecode<'txn>,
+        KC: BytesDecode,
+        DC: BytesDecode,
     {
         self.dyndb.last::<T, KC, DC>(txn)
     }
@@ -1436,7 +1436,7 @@ impl<KC, DC> Database<KC, DC> {
         range: &'a R,
     ) -> Result<usize>
     where
-        KC: BytesEncode<'a> + BytesDecode<'txn>,
+        KC: BytesEncode<'a> + BytesDecode,
         R: RangeBounds<KC::EItem>,
     {
         self.dyndb.delete_range::<T, KC, R>(txn, range)
@@ -1540,10 +1540,10 @@ impl<KC, DC> Database<KC, DC> {
         self.remap_types::<KC, DC2>()
     }
 
-    /// Wrap the data bytes into a lazy decoder.
-    pub fn lazily_decode_data(&self) -> Database<KC, LazyDecode<DC>> {
-        self.remap_types::<KC, LazyDecode<DC>>()
-    }
+    // /// Wrap the data bytes into a lazy decoder.
+    // pub fn lazily_decode_data(&self) -> Database<KC, LazyDecode<DC>> {
+    //     self.remap_types::<KC, LazyDecode<DC>>()
+    // }
 
     /// Get an handle on the internal polymorphic database.
     ///

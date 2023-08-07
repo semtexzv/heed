@@ -13,6 +13,8 @@ bincode = { version = "1.2.1", optional = true }
 heed-traits = { version = "0.7.0", path = "../heed-traits" }
 serde = { version = "1.0.117", optional = true }
 serde_json = { version = "1.0.59", optional = true }
+ordcode = { git = "https://github.com/semtexzv/ordcode", optional = true }
+protokit = { git = "https://github.com/semtexzv/protokit", default-features = false, features = ["textformat"], optional = true }
 zerocopy = "0.3.0"
 
 [features]

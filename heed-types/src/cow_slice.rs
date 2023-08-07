@@ -34,15 +34,15 @@ where
     }
 }
 
-impl<'a, T: 'a> BytesDecode<'a> for CowSlice<T>
+impl<T: 'static> BytesDecode for CowSlice<T>
 where
     T: FromBytes + Copy,
 {
-    type DItem = Cow<'a, [T]>;
+    type DItem = Cow<'static, [T]>;
 
-    fn bytes_decode(bytes: &'a [u8]) -> Option<Self::DItem> {
+    fn bytes_decode(bytes: &[u8]) -> Option<Self::DItem> {
         match LayoutVerified::<_, [T]>::new_slice(bytes) {
-            Some(layout) => Some(Cow::Borrowed(layout.into_slice())),
+            Some(layout) => Some(Cow::Owned(layout.to_vec())),
             None => {
                 let len = bytes.len();
                 let elem_size = mem::size_of::<T>();

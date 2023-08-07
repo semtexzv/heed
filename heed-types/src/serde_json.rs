@@ -1,7 +1,8 @@
 use std::borrow::Cow;
 
 use heed_traits::{BytesDecode, BytesEncode};
-use serde::{Deserialize, Serialize};
+use serde::de::DeserializeOwned;
+use serde::Serialize;
 
 /// Describes a type that is [`Serialize`]/[`Deserialize`] and uses `serde_json` to do so.
 ///
@@ -19,13 +20,13 @@ where
     }
 }
 
-impl<'a, T: 'a> BytesDecode<'a> for SerdeJson<T>
+impl<T: 'static> BytesDecode for SerdeJson<T>
 where
-    T: Deserialize<'a>,
+    T: DeserializeOwned,
 {
     type DItem = T;
 
-    fn bytes_decode(bytes: &'a [u8]) -> Option<Self::DItem> {
+    fn bytes_decode(bytes: &[u8]) -> Option<Self::DItem> {
         serde_json::from_slice(bytes).ok()
     }
 }

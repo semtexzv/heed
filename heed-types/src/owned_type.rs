@@ -3,7 +3,9 @@ use std::borrow::Cow;
 use heed_traits::{BytesDecode, BytesEncode};
 use zerocopy::{AsBytes, FromBytes};
 
-use crate::CowType;
+use crate::cow_type::CowType;
+
+// use crate::CowType;
 
 /// Describes a type that is totally owned (doesn't
 /// hold any reference to the original slice).
@@ -37,7 +39,7 @@ where
     }
 }
 
-impl<'a, T: 'a> BytesDecode<'a> for OwnedType<T>
+impl<'a, T: 'static> BytesDecode for OwnedType<T>
 where
     T: FromBytes + Copy,
 {

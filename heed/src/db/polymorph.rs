@@ -280,7 +280,7 @@ impl PolyDatabase {
     ) -> Result<Option<DC::DItem>>
     where
         KC: BytesEncode<'a>,
-        DC: BytesDecode<'txn>,
+        DC: BytesDecode,
     {
         assert_eq!(self.env_ident, txn.env.env_mut_ptr() as usize);
 
@@ -355,8 +355,8 @@ impl PolyDatabase {
         key: &'a KC::EItem,
     ) -> Result<Option<(KC::DItem, DC::DItem)>>
     where
-        KC: BytesEncode<'a> + BytesDecode<'txn>,
-        DC: BytesDecode<'txn>,
+        KC: BytesEncode<'a> + BytesDecode,
+        DC: BytesDecode,
     {
         assert_eq!(self.env_ident, txn.env.env_mut_ptr() as usize);
 
@@ -425,8 +425,8 @@ impl PolyDatabase {
         key: &'a KC::EItem,
     ) -> Result<Option<(KC::DItem, DC::DItem)>>
     where
-        KC: BytesEncode<'a> + BytesDecode<'txn>,
-        DC: BytesDecode<'txn>,
+        KC: BytesEncode<'a> + BytesDecode,
+        DC: BytesDecode,
     {
         assert_eq!(self.env_ident, txn.env.env_mut_ptr() as usize);
 
@@ -499,8 +499,8 @@ impl PolyDatabase {
         key: &'a KC::EItem,
     ) -> Result<Option<(KC::DItem, DC::DItem)>>
     where
-        KC: BytesEncode<'a> + BytesDecode<'txn>,
-        DC: BytesDecode<'txn>,
+        KC: BytesEncode<'a> + BytesDecode,
+        DC: BytesDecode,
     {
         assert_eq!(self.env_ident, txn.env.env_mut_ptr() as usize);
 
@@ -572,8 +572,8 @@ impl PolyDatabase {
         key: &'a KC::EItem,
     ) -> Result<Option<(KC::DItem, DC::DItem)>>
     where
-        KC: BytesEncode<'a> + BytesDecode<'txn>,
-        DC: BytesDecode<'txn>,
+        KC: BytesEncode<'a> + BytesDecode,
+        DC: BytesDecode,
     {
         assert_eq!(self.env_ident, txn.env.env_mut_ptr() as usize);
 
@@ -631,8 +631,8 @@ impl PolyDatabase {
         txn: &'txn RoTxn<T>,
     ) -> Result<Option<(KC::DItem, DC::DItem)>>
     where
-        KC: BytesDecode<'txn>,
-        DC: BytesDecode<'txn>,
+        KC: BytesDecode,
+        DC: BytesDecode,
     {
         assert_eq!(self.env_ident, txn.env.env_mut_ptr() as usize);
 
@@ -689,8 +689,8 @@ impl PolyDatabase {
         txn: &'txn RoTxn<T>,
     ) -> Result<Option<(KC::DItem, DC::DItem)>>
     where
-        KC: BytesDecode<'txn>,
-        DC: BytesDecode<'txn>,
+        KC: BytesDecode,
+        DC: BytesDecode,
     {
         assert_eq!(self.env_ident, txn.env.env_mut_ptr() as usize);
 
@@ -1865,7 +1865,7 @@ impl PolyDatabase {
         range: &'a R,
     ) -> Result<usize>
     where
-        KC: BytesEncode<'a> + BytesDecode<'txn>,
+        KC: BytesEncode<'a> + BytesDecode,
         R: RangeBounds<KC::EItem>,
     {
         assert_eq!(self.env_ident, txn.txn.env.env_mut_ptr() as usize);

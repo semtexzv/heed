@@ -53,6 +53,7 @@ mod env;
 mod iter;
 mod lazy_decode;
 mod mdb;
+pub mod store;
 mod txn;
 
 use std::{error, fmt, io, result};
@@ -67,7 +68,7 @@ pub use self::iter::{
     RoIter, RoPrefix, RoRange, RoRevIter, RoRevPrefix, RoRevRange, RwIter, RwPrefix, RwRange,
     RwRevIter, RwRevPrefix, RwRevRange,
 };
-pub use self::lazy_decode::{Lazy, LazyDecode};
+// pub use self::lazy_decode::{Lazy, LazyDecode};
 pub use self::mdb::error::Error as MdbError;
 use self::mdb::ffi::{from_val, into_val};
 pub use self::mdb::flags;

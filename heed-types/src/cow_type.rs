@@ -40,15 +40,15 @@ where
     }
 }
 
-impl<'a, T: 'a> BytesDecode<'a> for CowType<T>
+impl<T: 'static> BytesDecode for CowType<T>
 where
     T: FromBytes + Copy,
 {
-    type DItem = Cow<'a, T>;
+    type DItem = Cow<'static, T>;
 
-    fn bytes_decode(bytes: &'a [u8]) -> Option<Self::DItem> {
+    fn bytes_decode(bytes: &[u8]) -> Option<Self::DItem> {
         match LayoutVerified::<_, T>::new(bytes) {
-            Some(layout) => Some(Cow::Borrowed(layout.into_ref())),
+            Some(layout) => Some(Cow::Owned(layout.to_owned())),
             None => {
                 let len = bytes.len();
                 let elem_size = mem::size_of::<T>();

@@ -82,16 +82,16 @@ impl<'txn, KC, DC> RoRange<'txn, KC, DC> {
         self.remap_types::<KC, DC2>()
     }
 
-    /// Wrap the data bytes into a lazy decoder.
-    pub fn lazily_decode_data(self) -> RoRange<'txn, KC, LazyDecode<DC>> {
-        self.remap_types::<KC, LazyDecode<DC>>()
-    }
+    // /// Wrap the data bytes into a lazy decoder.
+    // pub fn lazily_decode_data(self) -> RoRange<'txn, KC, LazyDecode<DC>> {
+    //     self.remap_types::<KC, LazyDecode<DC>>()
+    // }
 }
 
 impl<'txn, KC, DC> Iterator for RoRange<'txn, KC, DC>
 where
-    KC: BytesDecode<'txn>,
-    DC: BytesDecode<'txn>,
+    KC: BytesDecode,
+    DC: BytesDecode,
 {
     type Item = Result<(KC::DItem, DC::DItem)>;
 
@@ -287,16 +287,16 @@ impl<'txn, KC, DC> RwRange<'txn, KC, DC> {
         self.remap_types::<KC, DC2>()
     }
 
-    /// Wrap the data bytes into a lazy decoder.
-    pub fn lazily_decode_data(self) -> RwRange<'txn, KC, LazyDecode<DC>> {
-        self.remap_types::<KC, LazyDecode<DC>>()
-    }
+    // /// Wrap the data bytes into a lazy decoder.
+    // pub fn lazily_decode_data(self) -> RwRange<'txn, KC, LazyDecode<DC>> {
+    //     self.remap_types::<KC, LazyDecode<DC>>()
+    // }
 }
 
 impl<'txn, KC, DC> Iterator for RwRange<'txn, KC, DC>
 where
-    KC: BytesDecode<'txn>,
-    DC: BytesDecode<'txn>,
+    KC: BytesDecode,
+    DC: BytesDecode,
 {
     type Item = Result<(KC::DItem, DC::DItem)>;
 
@@ -410,16 +410,16 @@ impl<'txn, KC, DC> RoRevRange<'txn, KC, DC> {
         self.remap_types::<KC, DC2>()
     }
 
-    /// Wrap the data bytes into a lazy decoder.
-    pub fn lazily_decode_data(self) -> RoRevRange<'txn, KC, LazyDecode<DC>> {
-        self.remap_types::<KC, LazyDecode<DC>>()
-    }
+    // /// Wrap the data bytes into a lazy decoder.
+    // pub fn lazily_decode_data(self) -> RoRevRange<'txn, KC, LazyDecode<DC>> {
+    //     self.remap_types::<KC, LazyDecode<DC>>()
+    // }
 }
 
 impl<'txn, KC, DC> Iterator for RoRevRange<'txn, KC, DC>
 where
-    KC: BytesDecode<'txn>,
-    DC: BytesDecode<'txn>,
+    KC: BytesDecode,
+    DC: BytesDecode,
 {
     type Item = Result<(KC::DItem, DC::DItem)>;
 
@@ -617,16 +617,16 @@ impl<'txn, KC, DC> RwRevRange<'txn, KC, DC> {
         self.remap_types::<KC, DC2>()
     }
 
-    /// Wrap the data bytes into a lazy decoder.
-    pub fn lazily_decode_data(self) -> RwRevRange<'txn, KC, LazyDecode<DC>> {
-        self.remap_types::<KC, LazyDecode<DC>>()
-    }
+    // /// Wrap the data bytes into a lazy decoder.
+    // pub fn lazily_decode_data(self) -> RwRevRange<'txn, KC, LazyDecode<DC>> {
+    //     self.remap_types::<KC, LazyDecode<DC>>()
+    // }
 }
 
 impl<'txn, KC, DC> Iterator for RwRevRange<'txn, KC, DC>
 where
-    KC: BytesDecode<'txn>,
-    DC: BytesDecode<'txn>,
+    KC: BytesDecode,
+    DC: BytesDecode,
 {
     type Item = Result<(KC::DItem, DC::DItem)>;
 

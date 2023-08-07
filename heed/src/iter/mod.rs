@@ -6,14 +6,14 @@ pub use self::iter::{RoIter, RoRevIter, RwIter, RwRevIter};
 pub use self::prefix::{RoPrefix, RoRevPrefix, RwPrefix, RwRevPrefix};
 pub use self::range::{RoRange, RoRevRange, RwRange, RwRevRange};
 
-fn advance_key(bytes: &mut Vec<u8>) {
+pub(crate) fn advance_key(bytes: &mut Vec<u8>) {
     match bytes.last_mut() {
         Some(&mut 255) | None => bytes.push(0),
         Some(last) => *last += 1,
     }
 }
 
-fn retreat_key(bytes: &mut Vec<u8>) {
+pub(crate) fn retreat_key(bytes: &mut Vec<u8>) {
     match bytes.last_mut() {
         Some(&mut 0) => {
             bytes.pop();

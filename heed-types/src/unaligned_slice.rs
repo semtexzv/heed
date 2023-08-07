@@ -24,14 +24,16 @@ where
     }
 }
 
-impl<'a, T: 'a> BytesDecode<'a> for UnalignedSlice<T>
+impl<T: Clone + 'static> BytesDecode for UnalignedSlice<T>
 where
     T: FromBytes + Unaligned,
 {
-    type DItem = &'a [T];
+    type DItem = Vec<T>;
 
-    fn bytes_decode(bytes: &'a [u8]) -> Option<Self::DItem> {
-        LayoutVerified::<_, [T]>::new_slice_unaligned(bytes).map(LayoutVerified::into_slice)
+    fn bytes_decode(bytes: &[u8]) -> Option<Self::DItem> {
+        LayoutVerified::<_, [T]>::new_slice_unaligned(bytes)
+            .map(LayoutVerified::into_slice)
+            .map(|v| v.to_vec())
     }
 }
 

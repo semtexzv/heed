@@ -1,4 +1,5 @@
 use std::mem::size_of;
+
 use mdbx_sys as ffi;
 
 #[rustfmt::skip]
@@ -64,7 +65,13 @@ pub unsafe fn mdb_stat(txn: *mut MDB_txn, dbi: MDB_dbi, stat: *mut MDB_stat) -> 
 
 pub fn map_size(env: *mut MDB_env) -> Result<usize, crate::Error> {
     let mut env_info = std::mem::MaybeUninit::uninit();
-    unsafe { super::error::mdb_result(mdbx_env_info(env, env_info.as_mut_ptr(), size_of::<MDBX_envinfo>()))? };
+    unsafe {
+        super::error::mdb_result(mdbx_env_info(
+            env,
+            env_info.as_mut_ptr(),
+            size_of::<MDBX_envinfo>(),
+        ))?
+    };
     let env_info = unsafe { env_info.assume_init() };
 
     Ok(env_info.mi_mapsize as _)

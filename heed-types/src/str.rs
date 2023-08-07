@@ -15,10 +15,10 @@ impl BytesEncode<'_> for Str {
     }
 }
 
-impl<'a> BytesDecode<'a> for Str {
-    type DItem = &'a str;
+impl BytesDecode for Str {
+    type DItem = String;
 
-    fn bytes_decode(bytes: &'a [u8]) -> Option<Self::DItem> {
-        std::str::from_utf8(bytes).ok()
+    fn bytes_decode(bytes: &[u8]) -> Option<Self::DItem> {
+        std::str::from_utf8(bytes).ok().map(|v| v.to_string())
     }
 }

@@ -6,8 +6,8 @@ pub trait BytesEncode<'a> {
     fn bytes_encode(item: &'a Self::EItem) -> Option<Cow<'a, [u8]>>;
 }
 
-pub trait BytesDecode<'a> {
-    type DItem: 'a;
+pub trait BytesDecode {
+    type DItem: 'static;
 
-    fn bytes_decode(bytes: &'a [u8]) -> Option<Self::DItem>;
+    fn bytes_decode(bytes: &[u8]) -> Option<Self::DItem>;
 }

@@ -30,14 +30,16 @@ where
     }
 }
 
-impl<'a, T: 'a> BytesDecode<'a> for UnalignedType<T>
+impl<T: Clone + 'static> BytesDecode for UnalignedType<T>
 where
     T: FromBytes + Unaligned,
 {
-    type DItem = &'a T;
+    type DItem = T;
 
-    fn bytes_decode(bytes: &'a [u8]) -> Option<Self::DItem> {
-        LayoutVerified::<_, T>::new_unaligned(bytes).map(LayoutVerified::into_ref)
+    fn bytes_decode(bytes: &[u8]) -> Option<Self::DItem> {
+        LayoutVerified::<_, T>::new_unaligned(bytes)
+            .map(LayoutVerified::into_ref)
+            .map(|v| v.clone())
     }
 }
 

@@ -13,7 +13,7 @@ impl BytesEncode<'_> for Unit {
     }
 }
 
-impl BytesDecode<'_> for Unit {
+impl BytesDecode for Unit {
     type DItem = ();
 
     fn bytes_decode(bytes: &[u8]) -> Option<Self::DItem> {
