@@ -1,4 +1,3 @@
-use std::borrow::Cow;
 use std::collections::Bound;
 use std::marker::PhantomData;
 use std::ops::{Deref, RangeBounds};
@@ -10,14 +9,15 @@ use rocksdb::{
     Options, ReadOptions, TransactionDB,
 };
 
+use crate::iter::advance_key;
 use crate::store::{ErrorOf, RtxOf, Store, Table, Transaction, WtxOf};
 
 impl Store for TransactionDB<MultiThreaded> {
     type Error = rocksdb::Error;
     type Rtx<'e> = RockTxn<'e>;
     type Wtx<'e> = RockTxn<'e>;
-    type Config = Options;
     type Table<'store> = RockTable<'store>;
+    type Config = Options;
 
     fn table(&self, name: &str, opts: &Self::Config) -> Result<Self::Table<'_>, Self::Error> {
         match self.create_cf(name, opts) {
@@ -63,6 +63,7 @@ pub struct RockTable<'store> {
 }
 
 unsafe impl<'store> Send for RockTable<'store> {}
+
 unsafe impl<'store> Sync for RockTable<'store> {}
 
 pub struct Iter<'a, KC: BytesDecode, DC: BytesDecode> {
@@ -121,34 +122,35 @@ impl<'store> Table<'store> for RockTable<'store> {
         DC: BytesDecode,
         R: RangeBounds<KC::EItem>,
     {
-        let start = match range.start_bound() {
-            Bound::Included(i) => KC::bytes_encode(i),
-            Bound::Excluded(i) => KC::bytes_encode(i),
-            Bound::Unbounded => Some(Cow::Borrowed(&[][..])),
-        }
-        .unwrap_or_default();
-
-        let end = match range.end_bound() {
-            Bound::Included(i) => {
-                KC::bytes_encode(i).map(|v| {
-                    let mut v = v.to_vec();
-                    crate::iter::advance_key(&mut v);
-                    Cow::Owned(v)
-                })
-            },
-            Bound::Excluded(i) => KC::bytes_encode(i),
-            Bound::Unbounded => Some(Cow::Borrowed(&[][..])),
-        }
-            .unwrap_or_default();
-
         let mut opt = ReadOptions::default();
-        opt.set_iterate_upper_bound(end);
 
-        Ok(Iter {
-            it: txn.tx.iterator_cf_opt(&self.cf, opt, IteratorMode::From(&start, Direction::Forward)),
+        match range.end_bound() {
+            Bound::Included(i) => {
+                let mut v = KC::bytes_encode(i).unwrap().to_vec();
+                crate::iter::advance_key(&mut v);
+                opt.set_iterate_upper_bound(v);
+            }
+            Bound::Excluded(i) => {
+                opt.set_iterate_upper_bound(KC::bytes_encode(i).unwrap());
+            }
+            _ => {}
+        };
 
-            _p: Default::default(),
-        })
+        let it = match range.start_bound() {
+            Bound::Included(i) => {
+                let k = KC::bytes_encode(i).unwrap().to_vec();
+                txn.tx.iterator_cf_opt(&self.cf, opt, IteratorMode::From(&k, Direction::Forward))
+            }
+            Bound::Excluded(i) => {
+                let mut k = KC::bytes_encode(i).unwrap().to_vec();
+                advance_key(&mut k);
+
+                txn.tx.iterator_cf_opt(&self.cf, opt, IteratorMode::From(&k, Direction::Forward))
+            }
+            Bound::Unbounded => txn.tx.iterator_cf_opt(&self.cf, opt, IteratorMode::Start),
+        };
+
+        Ok(Iter { it, _p: Default::default() })
     }
 
     fn rev_range<'a, 'txn, KC, DC, R>(
@@ -161,29 +163,33 @@ impl<'store> Table<'store> for RockTable<'store> {
         DC: BytesDecode,
         R: RangeBounds<KC::EItem>,
     {
-
-
-        let start = match range.start_bound() {
-            Bound::Included(i) => KC::bytes_encode(i),
-            Bound::Excluded(_) => panic!("Excluded lower bound"),
-            Bound::Unbounded => Some(Cow::Borrowed(&[][..])),
-        }
-            .unwrap_or_default();
-
-        let end = match range.end_bound() {
-            Bound::Included(i) => KC::bytes_encode(i),
-            Bound::Excluded(i) => KC::bytes_encode(i),
-            Bound::Unbounded => Some(Cow::Borrowed(&[][..])),
-        }
-            .unwrap_or_default();
-
         let mut opt = ReadOptions::default();
-        opt.set_iterate_lower_bound(start);
 
-        Ok(Iter {
-            it: txn.tx.iterator_cf(&self.cf, IteratorMode::From(&end, Direction::Reverse)),
-            _p: Default::default(),
-        })
+        match range.start_bound() {
+            Bound::Included(i) => {
+                let v = KC::bytes_encode(i).unwrap().to_vec();
+                opt.set_iterate_lower_bound(v);
+            }
+            Bound::Excluded(..) => {
+                panic!("Excluded lower bound");
+            }
+            _ => {}
+        };
+
+        let it = match range.end_bound() {
+            Bound::Included(i) => {
+                let k = KC::bytes_encode(i).unwrap();
+                txn.tx.iterator_cf_opt(&self.cf, opt, IteratorMode::From(&k, Direction::Reverse))
+            }
+            Bound::Excluded(i) => {
+                let mut k = KC::bytes_encode(i).unwrap().to_vec();
+                crate::iter::retreat_key(&mut k);
+                txn.tx.iterator_cf_opt(&self.cf, opt, IteratorMode::From(&k, Direction::Reverse))
+            }
+            Bound::Unbounded => txn.tx.iterator_cf_opt(&self.cf, opt, IteratorMode::End),
+        };
+
+        Ok(Iter { it, _p: Default::default() })
     }
 
     fn len<'txn>(&self, txn: &'txn RtxOf<Self::Store>) -> Result<usize, ErrorOf<Self::Store>> {

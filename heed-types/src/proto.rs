@@ -1,7 +1,8 @@
 use std::borrow::Cow;
 use std::marker::PhantomData;
-use protokit::BinProto;
+
 use heed_traits::{BytesDecode, BytesEncode};
+use protokit::BinProto;
 
 pub struct Proto<T>(PhantomData<T>);
 

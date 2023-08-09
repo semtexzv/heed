@@ -15,21 +15,25 @@ pub trait Store: Sized + Send + Sync + 'static {
     type Error: Error + Send + Sync + 'static;
 
     type Rtx<'e>: Transaction<Self>
-        where
-            Self: 'e;
+    where
+        Self: 'e;
 
-    type Wtx<'e>: Transaction<Self> + Deref<Target=Self::Rtx<'e>>
-        where
-            Self: 'e;
+    type Wtx<'e>: Transaction<Self> + Deref<Target = Self::Rtx<'e>>
+    where
+        Self: 'e;
 
-    type Table<'store>: Table<'store, Store=Self> + Send + Sync
-        where
-            Self: 'store;
+    type Table<'store>: Table<'store, Store = Self> + Send + Sync
+    where
+        Self: 'store;
 
     type Config;
 
     fn table(&self, name: &str, cfg: &Self::Config) -> Result<Self::Table<'_>, Self::Error>;
-    fn typed<KC, DC>(&self, name: &str, cfg: &Self::Config) -> Result<Typed<Self, KC, DC>, Self::Error> {
+    fn typed<KC, DC>(
+        &self,
+        name: &str,
+        cfg: &Self::Config,
+    ) -> Result<Typed<Self, KC, DC>, Self::Error> {
         Ok(Typed { dyndb: self.table(name, cfg)?, marker: Default::default() })
     }
     fn rtx(&self) -> Result<Self::Rtx<'_>, Self::Error>;
@@ -61,16 +65,16 @@ pub trait Transaction<S: Store>: Sized {
 }
 
 pub trait Table<'store>: 'store {
-    type Store: Store<Table<'store>=Self>
-        where
-            Self: 'store;
+    type Store: Store<Table<'store> = Self>
+    where
+        Self: 'store;
 
     type Range<'e, KC: BytesDecode, DC: BytesDecode>: Iterator<
-        Item=Result<(KC::DItem, DC::DItem), ErrorOf<Self::Store>>,
+        Item = Result<(KC::DItem, DC::DItem), ErrorOf<Self::Store>>,
     >;
 
     type RevRange<'e, KC: BytesDecode, DC: BytesDecode>: Iterator<
-        Item=Result<(KC::DItem, DC::DItem), ErrorOf<Self::Store>>,
+        Item = Result<(KC::DItem, DC::DItem), ErrorOf<Self::Store>>,
     >;
 
     fn get<'a, 'txn, KC, DC>(
@@ -78,29 +82,29 @@ pub trait Table<'store>: 'store {
         txn: &'txn RtxOf<Self::Store>,
         key: &'a KC::EItem,
     ) -> Result<Option<DC::DItem>, ErrorOf<Self::Store>>
-        where
-            KC: BytesEncode<'a>,
-            DC: BytesDecode;
+    where
+        KC: BytesEncode<'a>,
+        DC: BytesDecode;
 
     fn range<'a, 'txn, KC, DC, R>(
         &self,
         txn: &'txn RtxOf<Self::Store>,
         range: &'a R,
     ) -> Result<Self::Range<'txn, KC, DC>, ErrorOf<Self::Store>>
-        where
-            KC: BytesEncode<'a> + BytesDecode,
-            DC: BytesDecode,
-            R: RangeBounds<KC::EItem>;
+    where
+        KC: BytesEncode<'a> + BytesDecode,
+        DC: BytesDecode,
+        R: RangeBounds<KC::EItem>;
 
     fn rev_range<'a, 'txn, KC, DC, R>(
         &self,
         txn: &'txn RtxOf<Self::Store>,
         range: &'a R,
     ) -> Result<Self::RevRange<'txn, KC, DC>, ErrorOf<Self::Store>>
-        where
-            KC: BytesEncode<'a> + BytesDecode,
-            DC: BytesDecode,
-            R: RangeBounds<KC::EItem>;
+    where
+        KC: BytesEncode<'a> + BytesDecode,
+        DC: BytesDecode,
+        R: RangeBounds<KC::EItem>;
 
     fn len<'txn>(&self, txn: &'txn RtxOf<Self::Store>) -> Result<usize, ErrorOf<Self::Store>>;
 
@@ -110,17 +114,17 @@ pub trait Table<'store>: 'store {
         key: &'a KC::EItem,
         data: &'a DC::EItem,
     ) -> Result<(), ErrorOf<Self::Store>>
-        where
-            KC: BytesEncode<'a>,
-            DC: BytesEncode<'a>;
+    where
+        KC: BytesEncode<'a>,
+        DC: BytesEncode<'a>;
 
     fn delete<'a, KC>(
         &self,
         txn: &mut WtxOf<Self::Store>,
         key: &'a KC::EItem,
     ) -> Result<(), ErrorOf<Self::Store>>
-        where
-            KC: BytesEncode<'a>;
+    where
+        KC: BytesEncode<'a>;
 }
 
 pub struct Typed<'s, S: Store + 's, KC, DC> {
@@ -129,8 +133,8 @@ pub struct Typed<'s, S: Store + 's, KC, DC> {
 }
 
 impl<'s, S: Store, KC, DC> Clone for Typed<'s, S, KC, DC>
-    where
-        S::Table<'s>: Clone,
+where
+    S::Table<'s>: Clone,
 {
     fn clone(&self) -> Self {
         Self { dyndb: self.dyndb.clone(), marker: Default::default() }
@@ -143,9 +147,9 @@ impl<'s, S: Store, KC, DC> Typed<'s, S, KC, DC> {
         txn: &'txn RtxOf<S>,
         key: &'a KC::EItem,
     ) -> Result<Option<DC::DItem>, ErrorOf<S>>
-        where
-            KC: BytesEncode<'a>,
-            DC: BytesDecode,
+    where
+        KC: BytesEncode<'a>,
+        DC: BytesDecode,
     {
         self.dyndb.get::<KC, DC>(txn, key)
     }
@@ -155,10 +159,10 @@ impl<'s, S: Store, KC, DC> Typed<'s, S, KC, DC> {
         txn: &'txn RtxOf<S>,
         range: &'a R,
     ) -> Result<<S::Table<'s> as Table<'s>>::Range<'txn, KC, DC>, ErrorOf<S>>
-        where
-            KC: BytesEncode<'a> + BytesDecode,
-            DC: BytesDecode,
-            R: RangeBounds<KC::EItem>,
+    where
+        KC: BytesEncode<'a> + BytesDecode,
+        DC: BytesDecode,
+        R: RangeBounds<KC::EItem>,
     {
         self.dyndb.range::<KC, DC, R>(txn, range)
     }
@@ -168,10 +172,10 @@ impl<'s, S: Store, KC, DC> Typed<'s, S, KC, DC> {
         txn: &'txn RtxOf<S>,
         range: &'a R,
     ) -> Result<<S::Table<'s> as Table<'s>>::RevRange<'txn, KC, DC>, ErrorOf<S>>
-        where
-            KC: BytesEncode<'a> + BytesDecode,
-            DC: BytesDecode,
-            R: RangeBounds<KC::EItem>,
+    where
+        KC: BytesEncode<'a> + BytesDecode,
+        DC: BytesDecode,
+        R: RangeBounds<KC::EItem>,
     {
         self.dyndb.rev_range::<KC, DC, R>(txn, range)
     }
@@ -186,16 +190,16 @@ impl<'s, S: Store, KC, DC> Typed<'s, S, KC, DC> {
         key: &'a KC::EItem,
         data: &'a DC::EItem,
     ) -> Result<(), ErrorOf<S>>
-        where
-            KC: BytesEncode<'a>,
-            DC: BytesEncode<'a>,
+    where
+        KC: BytesEncode<'a>,
+        DC: BytesEncode<'a>,
     {
         self.dyndb.put::<KC, DC>(txn, key, data)
     }
 
     pub fn delete<'a>(&self, txn: &mut WtxOf<S>, key: &'a KC::EItem) -> Result<(), ErrorOf<S>>
-        where
-            KC: BytesEncode<'a>,
+    where
+        KC: BytesEncode<'a>,
     {
         self.dyndb.delete::<KC>(txn, key).map(|_| ())
     }
@@ -227,16 +231,14 @@ pub struct Tables<S: Store, T> {
 
 impl<S: Store, T> Tables<S, T> {
     pub fn new<F>(store: S, cfg: &S::Config, make: F) -> Result<Tables<S, T>, S::Error>
-        where F: FnOnce(&'static S, &S::Config) -> Result<T, S::Error>
+    where
+        F: FnOnce(&'static S, &S::Config) -> Result<T, S::Error>,
     {
         let store = Box::new(store);
         let store = Box::leak::<'static>(store) as &'static S;
         let o = make(&store, cfg)?;
 
-        Ok(Tables {
-            store,
-            table: Some(o),
-        })
+        Ok(Tables { store, table: Some(o) })
     }
 }
 

@@ -34,6 +34,7 @@
 
 mod cow_slice;
 mod cow_type;
+mod fixed_slice;
 mod owned_slice;
 mod owned_type;
 mod str;
@@ -44,15 +45,16 @@ mod unit;
 #[cfg(feature = "serde-bincode")]
 mod serde_bincode;
 
-#[cfg(feature = "serde-json")]
-mod serde_json;
 #[cfg(feature = "protokit")]
 mod proto;
+#[cfg(feature = "serde-json")]
+mod serde_json;
 #[cfg(feature = "ordcode")]
 mod serde_ordcode;
 
-// pub use self::cow_slice::CowSlice;
-// pub use self::cow_type::CowType;
+pub use self::cow_slice::CowSlice;
+pub use self::cow_type::CowType;
+pub use self::fixed_slice::FixedSlice;
 pub use self::owned_slice::OwnedSlice;
 pub use self::owned_type::OwnedType;
 pub use self::str::Str;
@@ -80,14 +82,14 @@ impl heed_traits::BytesDecode for DecodeIgnore {
     }
 }
 
+#[cfg(feature = "protokit")]
+pub use self::proto::Proto;
 #[cfg(feature = "serde-bincode")]
 pub use self::serde_bincode::SerdeBincode;
 #[cfg(feature = "serde-json")]
 pub use self::serde_json::SerdeJson;
 #[cfg(feature = "ordcode")]
 pub use self::serde_ordcode::Ordcode;
-#[cfg(feature = "protokit")]
-pub use self::proto::Proto;
 
 fn aligned_to(bytes: &[u8], align: usize) -> bool {
     (bytes as *const _ as *const () as usize) % align == 0
