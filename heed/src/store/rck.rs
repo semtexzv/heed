@@ -4,6 +4,7 @@ use std::ops::{Deref, RangeBounds};
 use std::sync::Arc;
 
 use heed_traits::{BytesDecode, BytesEncode};
+use heed_types::{ByteSlice, Unit};
 use rocksdb::{
     BoundColumnFamily, DBIteratorWithThreadMode, Direction, ErrorKind, IteratorMode, MultiThreaded,
     Options, ReadOptions, TransactionDB,
@@ -15,7 +16,7 @@ use crate::store::{ErrorOf, RtxOf, Store, Table, Transaction, WtxOf};
 impl Store for TransactionDB<MultiThreaded> {
     type Error = rocksdb::Error;
     type Rtx<'e> = RockTxn<'e>;
-    type Wtx<'e> = RockTxn<'e>;
+    type Wtx<'e> = WRockTxn<'e>;
     type Table<'store> = RockTable<'store>;
     type Config = Options;
 
@@ -36,20 +37,30 @@ impl Store for TransactionDB<MultiThreaded> {
     }
 
     fn wtx(&self) -> Result<Self::Wtx<'_>, Self::Error> {
-        Ok(RockTxn { tx: self.transaction() })
+        Ok(WRockTxn { tx: RockTxn { tx: self.transaction() } })
+    }
+}
+
+pub struct WRockTxn<'a> {
+    tx: RockTxn<'a>,
+}
+
+impl<'a> Deref for WRockTxn<'a> {
+    type Target = RockTxn<'a>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.tx
+    }
+}
+
+impl Transaction<TransactionDB<MultiThreaded>> for WRockTxn<'_> {
+    fn commit(self) -> Result<(), ErrorOf<TransactionDB<MultiThreaded>>> {
+        rocksdb::Transaction::commit(self.tx.tx)
     }
 }
 
 pub struct RockTxn<'a> {
     tx: rocksdb::Transaction<'a, TransactionDB<MultiThreaded>>,
-}
-
-impl Deref for RockTxn<'_> {
-    type Target = Self;
-
-    fn deref(&self) -> &Self::Target {
-        self
-    }
 }
 
 impl Transaction<TransactionDB<MultiThreaded>> for RockTxn<'_> {
@@ -58,6 +69,7 @@ impl Transaction<TransactionDB<MultiThreaded>> for RockTxn<'_> {
     }
 }
 
+#[derive(Clone)]
 pub struct RockTable<'store> {
     cf: Arc<BoundColumnFamily<'store>>,
 }
@@ -77,6 +89,7 @@ impl<'a, KC: BytesDecode, DC: BytesDecode> Iterator for Iter<'a, KC, DC> {
     fn next(&mut self) -> Option<Self::Item> {
         match self.it.next()? {
             Ok(v) => {
+                // println!("iter {:?} => {:?}", &v.0, &v.1);
                 return Some(Ok((
                     KC::bytes_decode(&v.0).unwrap(),
                     DC::bytes_decode(&v.1).unwrap(),
@@ -208,9 +221,13 @@ impl<'store> Table<'store> for RockTable<'store> {
     {
         let k = KC::bytes_encode(key).unwrap();
         let v = DC::bytes_encode(data).unwrap();
-        txn.tx.put_cf(&self.cf, k, v)?;
+        txn.tx.tx.put_cf(&self.cf, k, v)?;
 
         Ok(())
+    }
+
+    fn append<'a, KC, DC>(&self, txn: &mut WtxOf<Self::Store>, key: &'a KC::EItem, data: &'a DC::EItem) -> Result<(), ErrorOf<Self::Store>> where KC: BytesEncode<'a>, DC: BytesEncode<'a> {
+        self.put::<KC, DC>(txn, key, data)
     }
 
     fn delete<'a, KC>(
@@ -222,7 +239,17 @@ impl<'store> Table<'store> for RockTable<'store> {
         KC: BytesEncode<'a>,
     {
         let k = KC::bytes_encode(key).unwrap();
-        txn.tx.delete_cf(&self.cf, k)?;
+        txn.tx.tx.delete_cf(&self.cf, k)?;
+        Ok(())
+    }
+
+    fn clear(&self, txn: &mut WtxOf<Self::Store>) -> Result<(), ErrorOf<Self::Store>> {
+        let items =
+            self.range::<ByteSlice, Unit, _>(txn, &..).unwrap().collect::<Result<Vec<_>, _>>()?;
+
+        for (k, _) in items {
+            self.delete::<ByteSlice>(txn, &k)?;
+        }
         Ok(())
     }
 }

@@ -105,6 +105,10 @@ impl<'store> Table<'store> for PolyDatabase {
         PolyDatabase::put::<(), KC, DC>(self, txn, key, data)
     }
 
+    fn append<'a, KC, DC>(&self, txn: &mut WtxOf<Self::Store>, key: &'a KC::EItem, data: &'a DC::EItem) -> Result<(), ErrorOf<Self::Store>> where KC: BytesEncode<'a>, DC: BytesEncode<'a> {
+        PolyDatabase::append::<(), KC, DC>(self, txn, key, data)
+    }
+
     fn delete<'a, KC>(
         &self,
         txn: &mut WtxOf<Self::Store>,
@@ -114,5 +118,9 @@ impl<'store> Table<'store> for PolyDatabase {
         KC: BytesEncode<'a>,
     {
         PolyDatabase::delete::<(), KC>(self, txn, key).map(|_| ())
+    }
+
+    fn clear(&self, txn: &mut WtxOf<Self::Store>) -> Result<(), ErrorOf<Self::Store>> {
+        PolyDatabase::clear(self,txn)
     }
 }

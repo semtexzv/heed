@@ -1,3 +1,4 @@
+#![feature(associated_type_bounds)]
 //! Crate `heed` is a high-level wrapper of [LMDB], high-level doesn't mean heavy (think about Rust).
 //!
 //! It provides you a way to store types in LMDB without any limit and with a minimal overhead as possible,

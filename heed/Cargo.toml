@@ -24,6 +24,7 @@ page_size = "0.4.2"
 serde = { version = "1.0.118", features = ["derive"], optional = true }
 synchronoise = "1.0.0"
 zerocopy = "0.3.0"
+either = "1.9.0"
 
 [dev-dependencies]
 serde = { version = "1.0.118", features = ["derive"] }
@@ -74,7 +75,6 @@ serde-bincode = ["heed-types/serde", "heed-types/bincode"]
 serde-json = ["heed-types/serde", "heed-types/serde_json"]
 serde-ordcode = ["heed-types/serde", "heed-types/ordcode"]
 proto = ["heed-types/protokit"]
-
 
 # serde_json features
 preserve_order = ["heed-types/preserve_order"]
