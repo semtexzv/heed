@@ -42,20 +42,20 @@ pub trait Store: Sized + Send + Sync + 'static {
     fn wtx(&self) -> Result<Self::Wtx<'_>, Self::Error>;
     fn with_rtx<R>(
         &self,
-        fun: impl FnOnce(&Self, &RtxOf<Self>) -> Result<R, Self::Error>,
+        fun: impl FnOnce(&RtxOf<Self>) -> Result<R, Self::Error>,
     ) -> Result<R, Self::Error> {
         let rtx = self.rtx()?;
-        let out = fun(self, &rtx)?;
+        let out = fun(&rtx)?;
         rtx.commit()?;
 
         Ok(out)
     }
     fn with_wtx<R>(
         &self,
-        fun: impl FnOnce(&Self, &mut WtxOf<Self>) -> Result<R, Self::Error>,
+        fun: impl FnOnce(&mut WtxOf<Self>) -> Result<R, Self::Error>,
     ) -> Result<R, Self::Error> {
         let mut rtx = self.wtx()?;
-        let out = fun(self, &mut rtx)?;
+        let out = fun(&mut rtx)?;
         rtx.commit()?;
 
         Ok(out)
