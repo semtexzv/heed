@@ -84,10 +84,6 @@ impl<'store> Table<'store> for PolyDatabase {
         PolyDatabase::rev_range(self, txn, range)
     }
 
-    // fn range<'a, 'txn, KC, DC>(&self, txn: &'txn RtxOf<Self::Store>, key: &'a KC::EItem) -> Result<Self::Range<'txn, KC, DC>, ErrorOf<Self::Store>> where KC: BytesEncode<'a> + BytesDecode, DC: BytesDecode {
-    //     PolyDatabase::range(self,txn, &(key..))
-    // }
-
     fn len<'txn>(&self, txn: &'txn RtxOf<Self::Store>) -> Result<usize, ErrorOf<Self::Store>> {
         PolyDatabase::len(self, txn)
     }
@@ -105,7 +101,16 @@ impl<'store> Table<'store> for PolyDatabase {
         PolyDatabase::put::<(), KC, DC>(self, txn, key, data)
     }
 
-    fn append<'a, KC, DC>(&self, txn: &mut WtxOf<Self::Store>, key: &'a KC::EItem, data: &'a DC::EItem) -> Result<(), ErrorOf<Self::Store>> where KC: BytesEncode<'a>, DC: BytesEncode<'a> {
+    fn append<'a, KC, DC>(
+        &self,
+        txn: &mut WtxOf<Self::Store>,
+        key: &'a KC::EItem,
+        data: &'a DC::EItem,
+    ) -> Result<(), ErrorOf<Self::Store>>
+    where
+        KC: BytesEncode<'a>,
+        DC: BytesEncode<'a>,
+    {
         PolyDatabase::append::<(), KC, DC>(self, txn, key, data)
     }
 
@@ -121,6 +126,6 @@ impl<'store> Table<'store> for PolyDatabase {
     }
 
     fn clear(&self, txn: &mut WtxOf<Self::Store>) -> Result<(), ErrorOf<Self::Store>> {
-        PolyDatabase::clear(self,txn)
+        PolyDatabase::clear(self, txn)
     }
 }

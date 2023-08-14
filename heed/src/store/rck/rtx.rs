@@ -5,12 +5,15 @@ use std::sync::Arc;
 
 use heed_traits::{BytesDecode, BytesEncode};
 use heed_types::{ByteSlice, Unit};
-use rocksdb::{BoundColumnFamily, DBIteratorWithThreadMode, DBWithThreadMode, Direction, ErrorKind, IteratorMode, MultiThreaded, Options, ReadOptions, WriteBatch};
+use rocksdb::{
+    BoundColumnFamily, DBIteratorWithThreadMode, Direction, ErrorKind, IteratorMode, MultiThreaded,
+    Options, ReadOptions, TransactionDB,
+};
 
 use crate::iter::advance_key;
 use crate::store::{ErrorOf, RtxOf, Store, Table, Transaction, WtxOf};
 
-pub type DBType = DBWithThreadMode<MultiThreaded>;
+pub type DBType = TransactionDB<MultiThreaded>;
 
 impl Store for DBType {
     type Error = rocksdb::Error;
@@ -23,8 +26,8 @@ impl Store for DBType {
         match self.create_cf(name, opts) {
             Ok(..) => {}
             Err(e)
-            if e.kind() == ErrorKind::InvalidArgument
-                && e.to_string().contains("Column family already exists") => {}
+                if e.kind() == ErrorKind::InvalidArgument
+                    && e.to_string().contains("Column family already exists") => {}
             Err(e) => return Err(e),
         };
         let cf = self.cf_handle(name).unwrap();
@@ -32,17 +35,17 @@ impl Store for DBType {
     }
 
     fn rtx(&self) -> Result<Self::Rtx<'_>, Self::Error> {
-        Ok(RockTxn { db: self }) // self.transaction() })
+        Ok(RockTxn { tx: self.transaction() })
     }
 
     fn wtx(&self) -> Result<Self::Wtx<'_>, Self::Error> {
-        Ok(WRockTxn { db: RockTxn { db: self }, wb: WriteBatch::default() })// self.transaction() } })
+        Ok(WRockTxn { db: RockTxn { tx: self.transaction() } })
     }
 }
 
 pub struct WRockTxn<'a> {
     db: RockTxn<'a>,
-    wb: WriteBatch, //&'a DBType, //rocksdb::Transaction<'a, TransactionDB<MultiThreaded>>,
+    // wb: WriteBatch, //&'a DBType, //rocksdb::Transaction<'a, TransactionDB<MultiThreaded>>,
 }
 
 impl<'a> Deref for WRockTxn<'a> {
@@ -55,19 +58,17 @@ impl<'a> Deref for WRockTxn<'a> {
 
 impl Transaction<DBType> for WRockTxn<'_> {
     fn commit(self) -> Result<(), ErrorOf<DBType>> {
-        self.db.db.write(self.wb)?;
-        Ok(())
-        // rocksdb::Transaction::commit(self.tx.tx)
+        rocksdb::Transaction::commit(self.db.tx)
     }
 }
 
 pub struct RockTxn<'a> {
-    db: &'a DBType,
+    tx: rocksdb::Transaction<'a, TransactionDB<MultiThreaded>>,
 }
 
 impl Transaction<DBType> for RockTxn<'_> {
     fn commit(self) -> Result<(), ErrorOf<DBType>> {
-        Ok(())
+        rocksdb::Transaction::commit(self.tx)
     }
 }
 
@@ -81,8 +82,7 @@ unsafe impl<'store> Send for RockTable<'store> {}
 unsafe impl<'store> Sync for RockTable<'store> {}
 
 pub struct Iter<'a, KC: BytesDecode, DC: BytesDecode> {
-    it: DBIteratorWithThreadMode<'a, DBType>,
-    //DBIteratorWithThreadMode<'a, rocksdb::Transaction<'a, DBType>>,
+    it: DBIteratorWithThreadMode<'a, rocksdb::Transaction<'a, DBType>>,
     _p: PhantomData<(KC, DC)>,
 }
 
@@ -115,12 +115,13 @@ impl<'store> Table<'store> for RockTable<'store> {
         txn: &'txn RtxOf<Self::Store>,
         key: &'a KC::EItem,
     ) -> Result<Option<DC::DItem>, ErrorOf<Self::Store>>
-        where
-            KC: BytesEncode<'a>,
-            DC: BytesDecode,
+    where
+        KC: BytesEncode<'a>,
+        DC: BytesDecode,
     {
         let key = KC::bytes_encode(key).unwrap();
-        let data = txn.db.get_pinned_cf_opt(&self.cf, key, &ReadOptions::default())?;
+        let opts = ReadOptions::default();
+        let data = txn.tx.get_pinned_cf_opt(&self.cf, key, &opts)?;
 
         Ok(data.and_then(|v| {
             let out = DC::bytes_decode(&v);
@@ -133,10 +134,10 @@ impl<'store> Table<'store> for RockTable<'store> {
         txn: &'txn RtxOf<Self::Store>,
         range: &'a R,
     ) -> Result<Self::Range<'txn, KC, DC>, ErrorOf<Self::Store>>
-        where
-            KC: BytesEncode<'a> + BytesDecode,
-            DC: BytesDecode,
-            R: RangeBounds<KC::EItem>,
+    where
+        KC: BytesEncode<'a> + BytesDecode,
+        DC: BytesDecode,
+        R: RangeBounds<KC::EItem>,
     {
         let mut opt = ReadOptions::default();
 
@@ -155,15 +156,15 @@ impl<'store> Table<'store> for RockTable<'store> {
         let it = match range.start_bound() {
             Bound::Included(i) => {
                 let k = KC::bytes_encode(i).unwrap().to_vec();
-                txn.db.iterator_cf_opt(&self.cf, opt, IteratorMode::From(&k, Direction::Forward))
+                txn.tx.iterator_cf_opt(&self.cf, opt, IteratorMode::From(&k, Direction::Forward))
             }
             Bound::Excluded(i) => {
                 let mut k = KC::bytes_encode(i).unwrap().to_vec();
                 advance_key(&mut k);
 
-                txn.db.iterator_cf_opt(&self.cf, opt, IteratorMode::From(&k, Direction::Forward))
+                txn.tx.iterator_cf_opt(&self.cf, opt, IteratorMode::From(&k, Direction::Forward))
             }
-            Bound::Unbounded => txn.db.iterator_cf_opt(&self.cf, opt, IteratorMode::Start),
+            Bound::Unbounded => txn.tx.iterator_cf_opt(&self.cf, opt, IteratorMode::Start),
         };
 
         Ok(Iter { it, _p: Default::default() })
@@ -174,10 +175,10 @@ impl<'store> Table<'store> for RockTable<'store> {
         txn: &'txn RtxOf<Self::Store>,
         range: &'a R,
     ) -> Result<Self::RevRange<'txn, KC, DC>, ErrorOf<Self::Store>>
-        where
-            KC: BytesEncode<'a> + BytesDecode,
-            DC: BytesDecode,
-            R: RangeBounds<KC::EItem>,
+    where
+        KC: BytesEncode<'a> + BytesDecode,
+        DC: BytesDecode,
+        R: RangeBounds<KC::EItem>,
     {
         let mut opt = ReadOptions::default();
 
@@ -195,21 +196,21 @@ impl<'store> Table<'store> for RockTable<'store> {
         let it = match range.end_bound() {
             Bound::Included(i) => {
                 let k = KC::bytes_encode(i).unwrap();
-                txn.db.iterator_cf_opt(&self.cf, opt, IteratorMode::From(&k, Direction::Reverse))
+                txn.tx.iterator_cf_opt(&self.cf, opt, IteratorMode::From(&k, Direction::Reverse))
             }
             Bound::Excluded(i) => {
                 let mut k = KC::bytes_encode(i).unwrap().to_vec();
                 crate::iter::retreat_key(&mut k);
-                txn.db.iterator_cf_opt(&self.cf, opt, IteratorMode::From(&k, Direction::Reverse))
+                txn.tx.iterator_cf_opt(&self.cf, opt, IteratorMode::From(&k, Direction::Reverse))
             }
-            Bound::Unbounded => txn.db.iterator_cf_opt(&self.cf, opt, IteratorMode::End),
+            Bound::Unbounded => txn.tx.iterator_cf_opt(&self.cf, opt, IteratorMode::End),
         };
 
         Ok(Iter { it, _p: Default::default() })
     }
 
     fn len<'txn>(&self, txn: &'txn RtxOf<Self::Store>) -> Result<usize, ErrorOf<Self::Store>> {
-        Ok(txn.db.iterator(IteratorMode::Start).count())
+        Ok(txn.tx.iterator(IteratorMode::Start).count())
     }
 
     fn put<'a, KC, DC>(
@@ -218,18 +219,27 @@ impl<'store> Table<'store> for RockTable<'store> {
         key: &'a KC::EItem,
         data: &'a DC::EItem,
     ) -> Result<(), ErrorOf<Self::Store>>
-        where
-            KC: BytesEncode<'a>,
-            DC: BytesEncode<'a>,
+    where
+        KC: BytesEncode<'a>,
+        DC: BytesEncode<'a>,
     {
         let k = KC::bytes_encode(key).unwrap();
         let v = DC::bytes_encode(data).unwrap();
-        txn.wb.put_cf(&self.cf, k, v);//?;
+        txn.tx.put_cf(&self.cf, k, v)?;
 
         Ok(())
     }
 
-    fn append<'a, KC, DC>(&self, txn: &mut WtxOf<Self::Store>, key: &'a KC::EItem, data: &'a DC::EItem) -> Result<(), ErrorOf<Self::Store>> where KC: BytesEncode<'a>, DC: BytesEncode<'a> {
+    fn append<'a, KC, DC>(
+        &self,
+        txn: &mut WtxOf<Self::Store>,
+        key: &'a KC::EItem,
+        data: &'a DC::EItem,
+    ) -> Result<(), ErrorOf<Self::Store>>
+    where
+        KC: BytesEncode<'a>,
+        DC: BytesEncode<'a>,
+    {
         self.put::<KC, DC>(txn, key, data)
     }
 
@@ -238,11 +248,11 @@ impl<'store> Table<'store> for RockTable<'store> {
         txn: &mut WtxOf<Self::Store>,
         key: &'a KC::EItem,
     ) -> Result<(), ErrorOf<Self::Store>>
-        where
-            KC: BytesEncode<'a>,
+    where
+        KC: BytesEncode<'a>,
     {
         let k = KC::bytes_encode(key).unwrap();
-        txn.wb.delete_cf(&self.cf, k);//?;
+        txn.tx.delete_cf(&self.cf, k)?;
         Ok(())
     }
 
@@ -253,6 +263,7 @@ impl<'store> Table<'store> for RockTable<'store> {
         for (k, _) in items {
             self.delete::<ByteSlice>(txn, &k)?;
         }
+
         Ok(())
     }
 }
