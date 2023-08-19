@@ -45,7 +45,6 @@ impl Store for DBType {
 
 pub struct WRockTxn<'a> {
     db: RockTxn<'a>,
-    // wb: WriteBatch, //&'a DBType, //rocksdb::Transaction<'a, TransactionDB<MultiThreaded>>,
 }
 
 impl<'a> Deref for WRockTxn<'a> {

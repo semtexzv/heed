@@ -358,3 +358,22 @@ pub fn writetx<S: Store, T>(
 ) -> Result<T, ErrorOf<S>> {
     s.with_wtx(fun)
 }
+
+
+/// Run a query in paged mode (start from provided value), and on each iteration overwrite the value
+/// from within the method. If the value was not changed in 2 iterations, we consider the paged
+/// query done. Useful for progress reporting migrations that use low amount of memory.
+pub fn paged<T: Clone + PartialEq, F: FnMut(&mut T) -> Result<(), E>, E>(
+    start: T,
+    mut fun: F,
+) -> Result<(), E> {
+    let mut old = start.clone();
+    let mut cur = start.clone();
+    loop {
+        fun(&mut cur)?;
+        if old == cur {
+            return Ok(());
+        }
+        old = cur.clone();
+    }
+}
